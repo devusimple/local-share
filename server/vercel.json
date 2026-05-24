@@ -1,0 +1,16 @@
+{
+  "buildCommand": "echo 'No build required'",
+  "outputDirectory": ".",
+  "functions": {
+    "api/socket.js": {
+      "memory": 256,
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/socket.io/(.*)",
+      "destination": "/api/socket"
+    }
+  ]
+}

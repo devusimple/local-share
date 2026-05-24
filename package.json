@@ -2,13 +2,9 @@
   "name": "local-share",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "node server/index.js && cd client && bun run dev --host",
     "build": "cd client && bun run build",
     "start": "NODE_ENV=production node server/index.js"
-  },
-  "dependencies": {
-    "socket.io": "^4.8.3"
   }
 }

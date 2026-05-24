@@ -1,4 +1,3 @@
-import http from "http"
 import { Server } from "socket.io"
 
 const peers = new Map()
@@ -21,8 +20,7 @@ function getAllPeers() {
   return Array.from(peers.values())
 }
 
-const server = http.createServer()
-const io = new Server(server, {
+const io = new Server({
   cors: { origin: "*" },
   transports: ["websocket", "polling"],
 })
@@ -102,9 +100,11 @@ io.on("connection", (socket) => {
 })
 
 export default function handler(req, res) {
-  if (typeof req.headers.upgrade === "string" && req.headers.upgrade.toLowerCase() === "websocket") {
-    server.emit("upgrade", req, req.socket, Buffer.alloc(0))
-  } else {
-    server.emit("request", req, res)
+  if (res.socket?.server) {
+    if (!res.socket.server.io) {
+      io.attach(res.socket.server)
+      res.socket.server.io = io
+    }
   }
+  res.end()
 }

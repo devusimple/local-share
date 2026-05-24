@@ -5,7 +5,8 @@ const STORAGE_KEY = "local-share-server-url"
 let socket: Socket | null = null
 
 export function getServerUrl(): string {
-  return localStorage.getItem(STORAGE_KEY) || window.location.origin
+  const envUrl = typeof import.meta !== "undefined" ? import.meta.env.VITE_SERVER_URL : ""
+  return localStorage.getItem(STORAGE_KEY) || envUrl || window.location.origin
 }
 
 export function setServerUrl(url: string): void {
