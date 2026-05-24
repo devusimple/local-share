@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
@@ -96,6 +95,15 @@ export function ChatView({ selectedPeer, onBack }: ChatViewProps) {
         return "destructive" as const
     }
   }
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const el = textareaRef.current
+    if (!el) return
+    el.style.height = "auto"
+    el.style.height = Math.min(el.scrollHeight, 128) + "px"
+  }, [text])
 
   const showPlaceholder = selectedPeer === null && filtered.length === 0
 
@@ -206,12 +214,19 @@ export function ChatView({ selectedPeer, onBack }: ChatViewProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
           </svg>
         </Button>
-        <Input
+        <textarea
           placeholder="Type a message"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          className="flex-1 border-0 bg-white dark:bg-[#2a3942] text-sm text-[#111b21] dark:text-[#e9edef] placeholder:text-[#667781] dark:placeholder:text-[#8696a0] rounded-lg focus-visible:ring-0 focus-visible:ring-offset-0"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault()
+              handleSend()
+            }
+          }}
+          ref={textareaRef}
+          rows={1}
+          className="flex-1 border-0 bg-white dark:bg-[#2a3942] text-sm text-[#111b21] dark:text-[#e9edef] placeholder:text-[#667781] dark:placeholder:text-[#8696a0] rounded-lg focus-visible:ring-0 focus-visible:ring-offset-0 resize-none py-2.5 px-3 max-h-32"
         />
         <Button
           variant="ghost"
@@ -232,14 +247,31 @@ export function ChatView({ selectedPeer, onBack }: ChatViewProps) {
 
 function MessageBubble({ msg, myId }: { msg: Message; myId: string | null }) {
   const isMine = msg.from === myId
+  const [showCopy, setShowCopy] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(msg.text)
+    } catch {
+      const ta = document.createElement("textarea")
+      ta.value = msg.text
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand("copy")
+      document.body.removeChild(ta)
+    }
+  }
+
   return (
-    <div className={`flex ${isMine ? "justify-end" : "justify-start"} mb-1`}>
+    <div className={`flex ${isMine ? "justify-end" : "justify-start"} mb-1 group`}>
       <div
         className={`relative max-w-[75%] rounded-lg px-3 py-1.5 text-sm shadow-sm ${
           isMine
             ? "bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef]"
             : "bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef]"
         }`}
+        onMouseEnter={() => setShowCopy(true)}
+        onMouseLeave={() => setShowCopy(false)}
       >
         {!isMine && (
           <div className="mb-0.5 text-[11px] font-medium" style={{ color: peerColor(msg.from) }}>
@@ -247,10 +279,23 @@ function MessageBubble({ msg, myId }: { msg: Message; myId: string | null }) {
           </div>
         )}
         <div className="text-[14px] leading-5 whitespace-pre-wrap break-words">{msg.text}</div>
-        <div className={`-mr-1 -mb-0.5 flex justify-end text-[11px] ${
-          isMine ? "text-[#667781] dark:text-[#aebac1]" : "text-[#667781] dark:text-[#8696a0]"
-        }`}>
-          {formatTime(msg.ts)}
+        <div className="flex items-center justify-end gap-1">
+          {(showCopy || isMine) && (
+            <button
+              onClick={handleCopy}
+              className="opacity-0 group-hover:opacity-100 transition-opacity text-[#667781] dark:text-[#8696a0] hover:text-[#00a884]"
+              title="Copy"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </button>
+          )}
+          <span className={`text-[11px] ${
+            isMine ? "text-[#667781] dark:text-[#aebac1]" : "text-[#667781] dark:text-[#8696a0]"
+          }`}>
+            {formatTime(msg.ts)}
+          </span>
         </div>
       </div>
     </div>
