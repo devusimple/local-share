@@ -2,27 +2,27 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MAX_NAME_LEN } from "@/lib/constants"
-import { getSocket } from "@/lib/socket"
+import { getSocket, getServerUrl, setServerUrl } from "@/lib/socket"
 import { useAppStore } from "@/store/appStore"
 
-const STORAGE_KEY = "local-share-name"
+const NAME_KEY = "local-share-name"
 
 export function JoinScreen() {
   const [name, setName] = useState("")
+  const [showServer, setShowServer] = useState(false)
+  const [serverInput, setServerInput] = useState(getServerUrl())
   const setMyName = useAppStore((s) => s.setMyName)
   const setJoined = useAppStore((s) => s.setJoined)
   const connected = useAppStore((s) => s.connected)
   const joinedRef = useRef(false)
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      setName(saved)
-    }
+    const saved = localStorage.getItem(NAME_KEY)
+    if (saved) setName(saved)
   }, [])
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = localStorage.getItem(NAME_KEY)
     if (saved && connected && !joinedRef.current) {
       joinedRef.current = true
       setMyName(saved)
@@ -34,13 +34,20 @@ export function JoinScreen() {
   const handleJoin = () => {
     const trimmed = name.trim().slice(0, MAX_NAME_LEN)
     if (!trimmed) return
-    localStorage.setItem(STORAGE_KEY, trimmed)
+    localStorage.setItem(NAME_KEY, trimmed)
     setMyName(trimmed)
     getSocket().emit("join", { name: trimmed })
     setJoined(true)
   }
 
-  if (localStorage.getItem(STORAGE_KEY) && connected) {
+  const handleServerChange = () => {
+    const url = serverInput.trim().replace(/\/+$/, "") || window.location.origin
+    setServerInput(url)
+    setServerUrl(url)
+    setShowServer(false)
+  }
+
+  if (localStorage.getItem(NAME_KEY) && connected) {
     return null
   }
 
@@ -69,6 +76,32 @@ export function JoinScreen() {
         >
           {connected ? "Join" : "Connecting..."}
         </Button>
+
+        {showServer ? (
+          <div className="flex w-full gap-2">
+            <Input
+              placeholder="http://192.168.1.100:3001"
+              value={serverInput}
+              onChange={(e) => setServerInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleServerChange()}
+              className="flex-1 border-[#e9edef] dark:border-[#2a3942] text-xs text-[#111b21] dark:text-[#e9edef]"
+            />
+            <Button
+              size="sm"
+              className="bg-[#00a884] hover:bg-[#008f72] text-white"
+              onClick={handleServerChange}
+            >
+              Save
+            </Button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowServer(true)}
+            className="text-xs text-[#667781] dark:text-[#8696a0] hover:text-[#00a884] underline underline-offset-2"
+          >
+            Server: {getServerUrl()}
+          </button>
+        )}
       </div>
     </div>
   )
